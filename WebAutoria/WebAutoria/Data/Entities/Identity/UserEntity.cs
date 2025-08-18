@@ -1,15 +1,30 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿// Додати поля: область, місто/село, фото профілю, номер телефону, дата реєстрації, роль, останній раз у мережі, аккаунт підтверджено
 
-namespace WebAutoria.Data.Entities.Identity;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
-public class UserEntity : IdentityUser<long>
+namespace WebAutoria.Entities.Identity
 {
-    public bool IsDeleted { get; set; } = false;
-    public DateTime DateCreated { get; set; } = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Utc);
-    public string? FirstName { get; set; } = string.Empty;
-    public string? LastName { get; set; } = string.Empty;
-    public string? Image { get; set; } = string.Empty;
+    public class UserEntity
+    {
+        [Key]
+        public int Id { get; set; }
 
-    public virtual ICollection<UserRoleEntity>? UserRoles { get; set; }
-    public ICollection<UserLoginEntity>? UserLogins { get; set; }
+        public string? LastName { get; set; }
+        public string? FirstName { get; set; }
+        public string? Email { get; set; }
+        public string? PasswordHash { get; set; }
+        public string? ProfilePhoto { get; set; }
+        public string? Region { get; set; }
+        public string? CityOrVillage { get; set; }
+        public string? PhoneNumber { get; set; }
+        public DateTime RegistrationDate { get; set; }
+        public string? Role { get; set; }
+        public DateTime? LastOnline { get; set; }
+        public bool IsConfirmed { get; set; }
+
+        public ICollection<FavoriteEntity> Favorites { get; set; }
+        public ICollection<AdEntity> Ads { get; set; }
+    }
 }
