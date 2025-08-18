@@ -1,16 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using WebAutoria.Data;
-using WebAutoria.Entities;
 
-namespace WebAutoria.Controllers
+namespace WebAutoria.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class FavoritesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class FavoritesController : ControllerBase
-    {
-        private readonly AppDbAutoriaContext _context;
-        public FavoritesController(AppDbAutoriaContext context) => _context = context;
+    private readonly AppDbAutoriaContext _context;
+    public FavoritesController(AppDbAutoriaContext context) => _context = context;
 
-        // CRUD endpoints for FavoriteEntity тут
-    }
+    // CRUD endpoints for FavoriteEntity тут
 }

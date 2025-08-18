@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using WebAutoria.Data;
-using WebAutoria.Entities;
 
 namespace WebAutoria.Controllers
 {

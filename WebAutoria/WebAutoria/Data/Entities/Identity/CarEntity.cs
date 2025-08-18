@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace WebAutoria.Entities.Identity
+namespace WebAutoria.Data.Entities.Identity
 {
     public class CarEntity
     {
