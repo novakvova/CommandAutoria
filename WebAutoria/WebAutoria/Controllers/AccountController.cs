@@ -35,7 +35,7 @@ public class AccountController(
             CityOrVillage = model.CityOrVillage,
             PhoneNumber = model.PhoneNumber,
             RegistrationDate = DateTime.UtcNow.AddHours(3), // Зберігаємо у UTC!
-            ProfilePhoto = profilePhotoPath
+            ProfilePhoto = model.ProfilePhotoPath
         };
 
         var result = await userManager.CreateAsync(user, model.Password);
