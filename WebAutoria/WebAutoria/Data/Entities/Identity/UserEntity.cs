@@ -14,8 +14,8 @@ namespace WebAutoria.Data.Entities.Identity
         public DateTime? LastOnline { get; set; }
         public bool IsConfirmed { get; set; }
 
-        public ICollection<FavoriteEntity> Favorites { get; set; }
-        public ICollection<AdEntity> Ads { get; set; }
+    public ICollection<FavoriteEntity> Favorites { get; set; }
+    public ICollection<AdEntity> Ads { get; set; } = new List<AdEntity>();
 
         public virtual ICollection<UserRoleEntity>? UserRoles { get; set; }
         public virtual ICollection<UserLoginEntity>? UserLogins { get; set; }
