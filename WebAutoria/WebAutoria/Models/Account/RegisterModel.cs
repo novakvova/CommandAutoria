@@ -1,4 +1,6 @@
-﻿namespace WebAutoria.Models.Account;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace WebAutoria.Models.Account;
 
 public class RegisterModel
 {
@@ -18,12 +20,14 @@ public class RegisterModel
     /// Електрона пошта користувача
     /// </summary>
     /// <example>fedir@example.com</example>
+    [Required, EmailAddress]
     public string Email { get; set; } = string.Empty;
 
     /// <summary>
     /// Пароль користувача
     /// </summary>
     /// <example>Admin123!</example>
+    [Required]
     public string Password { get; set; } = string.Empty;
 
     public IFormFile? ImageFile { get; set; } = null;

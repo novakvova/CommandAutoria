@@ -41,6 +41,15 @@ public class AppDbAutoriaContext : IdentityDbContext<UserEntity, RoleEntity, lon
                 .HasForeignKey(l => l.UserId)
                 .IsRequired();
         });
+        builder.Entity<AdEntity>(e =>
+        {
+            e.HasKey(a => a.Id);
+            e.HasOne(a=> a.User)
+                .WithMany(u => u.Ads)
+                .HasForeignKey(a => a.UserId)
+                .HasPrincipalKey(u => u.Id)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
     }
 }

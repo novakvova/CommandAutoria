@@ -89,6 +89,122 @@ namespace WebAutoria.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("WebAutoria.Data.Entities.Identity.AdEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Ads");
+                });
+
+            modelBuilder.Entity("WebAutoria.Data.Entities.Identity.CarEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DriveType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EngineType")
+                        .HasColumnType("text");
+
+                    b.Property<double>("EngineVolume")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("FuelConsumptionCity")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FuelConsumptionHighway")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Mileage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Number")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Photo")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Transmission")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VIN")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Cars");
+                });
+
+            modelBuilder.Entity("WebAutoria.Data.Entities.Identity.FavoriteEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CarId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Favorites");
+                });
+
             modelBuilder.Entity("WebAutoria.Data.Entities.Identity.RoleEntity", b =>
                 {
                     b.Property<long>("Id")
@@ -129,12 +245,12 @@ namespace WebAutoria.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("CityOrVillage")
+                        .HasColumnType("text");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -146,14 +262,14 @@ namespace WebAutoria.Migrations
                     b.Property<string>("FirstName")
                         .HasColumnType("text");
 
-                    b.Property<string>("Image")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
+                    b.Property<bool>("IsConfirmed")
                         .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastOnline")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
@@ -177,6 +293,15 @@ namespace WebAutoria.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("ProfilePhoto")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Region")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("RegistrationDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
@@ -263,6 +388,44 @@ namespace WebAutoria.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("WebAutoria.Data.Entities.Identity.AdEntity", b =>
+                {
+                    b.HasOne("WebAutoria.Data.Entities.Identity.CarEntity", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebAutoria.Data.Entities.Identity.UserEntity", "User")
+                        .WithMany("Ads")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WebAutoria.Data.Entities.Identity.FavoriteEntity", b =>
+                {
+                    b.HasOne("WebAutoria.Data.Entities.Identity.CarEntity", "Car")
+                        .WithMany()
+                        .HasForeignKey("CarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebAutoria.Data.Entities.Identity.UserEntity", "User")
+                        .WithMany("Favorites")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Car");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WebAutoria.Data.Entities.Identity.UserLoginEntity", b =>
                 {
                     b.HasOne("WebAutoria.Data.Entities.Identity.UserEntity", "User")
@@ -300,6 +463,10 @@ namespace WebAutoria.Migrations
 
             modelBuilder.Entity("WebAutoria.Data.Entities.Identity.UserEntity", b =>
                 {
+                    b.Navigation("Ads");
+
+                    b.Navigation("Favorites");
+
                     b.Navigation("UserLogins");
 
                     b.Navigation("UserRoles");
