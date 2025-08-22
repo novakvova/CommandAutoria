@@ -169,7 +169,11 @@ public class AccountController(
             Email = model.Email,
             FirstName = model.FirstName,
             LastName = model.LastName,
-            RegistrationDate = DateTime.UtcNow
+            Region = model.Region,
+            CityOrVillage = model.CityOrVillage,
+            PhoneNumber = model.PhoneNumber,
+            RegistrationDate = DateTime.UtcNow.AddHours(3), // Зберігаємо у UTC!
+            ProfilePhoto = model.ProfilePhotoPath
         };
 
         var result = await userManager.CreateAsync(user, model.Password);
