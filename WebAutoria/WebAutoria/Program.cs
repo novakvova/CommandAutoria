@@ -51,7 +51,7 @@
 //    {
 //        options.ClientId = builder.Configuration["Google:ClientId"]!;
 //        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-//        // ВАЖЛИВО: цей шлях має збігатися з Redirect URI у Google Cloud Console
+//        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ Redirect URI пїЅ Google Cloud Console
 //        options.CallbackPath = "/api/account/external-login-callback";
 //        options.Scope.Add("profile");
 //        options.Scope.Add("email");
@@ -73,10 +73,10 @@
 //    })
 //    .AddGoogle("Google", options =>
 //    {
-//        // значення занесемо в appsettings.json
+//        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ appsettings.json
 //        options.ClientId = builder.Configuration["Google:ClientId"]!;
 //        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-//        // ВАЖЛИВО: цей шлях має збігатися з Redirect URI у Google Cloud Console
+//        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ Redirect URI пїЅ Google Cloud Console
 //        options.CallbackPath = "/api/account/external-login-callback";
 //        options.Scope.Add("profile");
 //        options.Scope.Add("email");
@@ -97,7 +97,7 @@
 //        Name = "Authorization",
 //        In = ParameterLocation.Header,
 //        Type = SecuritySchemeType.Http,
-//        Description = "Введи JWT у форматі: Bearer {token}",
+//        Description = "пїЅпїЅпїЅпїЅпїЅ JWT пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ: Bearer {token}",
 //        Reference = new OpenApiReference
 //        {
 //            Id = JwtBearerDefaults.AuthenticationScheme,
@@ -150,13 +150,13 @@
 //builder.Services
 //    .AddIdentity<UserEntity, RoleEntity>(options =>
 //    {
-//        // за потреби можна налаштувати політики пароля/блокування тощо
+//        // пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ/пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ
 //        options.User.RequireUniqueEmail = true;
 //    })
 //    .AddEntityFrameworkStores<AppDbAutoriaContext>()
 //    .AddDefaultTokenProviders();
 
-//// ------------------ Сервіси --------------------
+//// ------------------ пїЅпїЅпїЅпїЅпїЅпїЅ --------------------
 //builder.Services.AddScoped<TokenService>();
 
 //builder.Services.AddControllers();
@@ -172,7 +172,7 @@
 //        Name = "Authorization",
 //        In = ParameterLocation.Header,
 //        Type = SecuritySchemeType.Http,
-//        Description = "Введи JWT у форматі: Bearer {token}",
+//        Description = "пїЅпїЅпїЅпїЅпїЅ JWT пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ: Bearer {token}",
 //        Reference = new OpenApiReference
 //        {
 //            Type = ReferenceType.SecurityScheme,
@@ -187,15 +187,15 @@
 //    });
 //});
 
-//// ------------------ CORS (опційно) ------------
+//// ------------------ CORS (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ) ------------
 //builder.Services.AddCors(options =>
 //{
 //    options.AddPolicy("Frontend", policy =>
 //    {
 //        policy
 //            .WithOrigins(
-//                "http://localhost:5173"  // <-- підстав свій фронтенд під час розробки
-//                                         //,"https://your-frontend.example.com" // прод
+//                "http://localhost:5173"  // <-- пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+//                                         //,"https://your-frontend.example.com" // пїЅпїЅпїЅпїЅ
 //            )
 //            .AllowAnyHeader()
 //            .AllowAnyMethod()
@@ -203,7 +203,7 @@
 //    });
 //});
 
-//// --------------- Authentication (JWT + Google) -- ЄДИНИЙ БЛОК ---------------
+//// --------------- Authentication (JWT + Google) -- пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ ---------------
 //builder.Services
 //    .AddAuthentication(options =>
 //    {
@@ -228,7 +228,7 @@
 //    {
 //        options.ClientId = builder.Configuration["Google:ClientId"]!;
 //        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
-//        // ВАЖЛИВО: цей шлях має 1-в-1 збігатися з Authorized redirect URI у Google Console
+//        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅ 1-пїЅ-1 пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ Authorized redirect URI пїЅ Google Console
 //        options.CallbackPath = "/api/account/external-login-callback";
 //        options.Scope.Add("profile");
 //        options.Scope.Add("email");
@@ -265,6 +265,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using WebAutoria.Data;
 using WebAutoria.Data.Entities.Identity;
+using WebAutoria.Seeder;
 using WebAutoria.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -299,7 +300,7 @@ builder.Services.AddSwaggerGen(o =>
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
-        Description = "Введи JWT у форматі: Bearer {token}",
+        Description = "пїЅпїЅпїЅпїЅпїЅ JWT пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ: Bearer {token}",
         Reference = new OpenApiReference
         {
             Type = ReferenceType.SecurityScheme,
@@ -314,16 +315,16 @@ builder.Services.AddSwaggerGen(o =>
     });
 });
 // ------------------ HttpClient ----------------
-// Використаємо фабрику для безпечного скачування аватарок
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 builder.Services.AddHttpClient();
 
-// ------------------ CORS (опційно) ------------
+// ------------------ CORS (пїЅпїЅпїЅпїЅпїЅпїЅпїЅ) ------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173") // змінюй під свій фронт
+            .WithOrigins("http://localhost:5173") // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -331,8 +332,8 @@ builder.Services.AddCors(options =>
 });
 
 // -------- Authentication (JWT + Google) --------
-// УВАГА: AddIdentity вже реєструє cookie-схеми (в т.ч. Identity.External).
-// Тут ми НЕ додаємо AddCookie ще раз — інакше буде дубль.
+// пїЅпїЅпїЅпїЅпїЅ: AddIdentity пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ cookie-пїЅпїЅпїЅпїЅпїЅ (пїЅ пїЅ.пїЅ. Identity.External).
+// пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ AddCookie пїЅпїЅ пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ.
 builder.Services
     .AddAuthentication(options =>
     {
@@ -377,7 +378,7 @@ builder.Services
         /////////////
     });
 
-// Налаштування вже існуючої зовнішньої cookie-схеми (без дублюючої реєстрації)
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ cookie-пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
 builder.Services.Configure<CookieAuthenticationOptions>(IdentityConstants.ExternalScheme, o =>
 {
     o.Cookie.Name = "ExternalAuth";
@@ -397,7 +398,7 @@ app.UseSwaggerUI();
 app.UseStaticFiles();
 app.UseCors("Frontend");
 
-// Політика SameSite (підстраховка для редіректів)
+// пїЅпїЅпїЅпїЅпїЅпїЅпїЅ SameSite (пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
 app.UseCookiePolicy(new CookiePolicyOptions
 {
     MinimumSameSitePolicy = SameSiteMode.Lax
@@ -410,5 +411,8 @@ app.MapControllers();
 
 app.UseStaticFiles();
 
+await app.SeedAsync();
+
 app.Run();
+
 
