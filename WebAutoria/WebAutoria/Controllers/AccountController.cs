@@ -169,12 +169,17 @@ public class AccountController(
             Email = model.Email,
             FirstName = model.FirstName,
             LastName = model.LastName,
-            RegistrationDate = DateTime.UtcNow
+            Region = model.Region,
+            CityOrVillage = model.CityOrVillage,
+            PhoneNumber = model.PhoneNumber,
+            RegistrationDate = DateTime.UtcNow.AddHours(3), // Зберігаємо у UTC!
+            ProfilePhoto = model.ProfilePhotoPath
         };
 
         var result = await userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
+            await userManager.AddToRoleAsync(user, "User");
 
         // Якщо є завантажене фото
         if (model.ImageFile is not null && model.ImageFile.Length > 0)
@@ -251,4 +256,23 @@ public class AccountController(
 
         return Ok("User deleted.");
     }
+
+    [Authorize(Roles = "Admin")]
+[HttpPost("assign-role")]
+public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
+{
+    var user = await userManager.FindByEmailAsync(model.Email);
+    if (user == null)
+        return NotFound($"User with email {model.Email} not found.");
+
+    if (!await signInManager.UserManager.IsInRoleAsync(user, model.Role))
+    {
+        var result = await userManager.AddToRoleAsync(user, model.Role);
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+    }
+
+    return Ok($"Role '{model.Role}' assigned to user {model.Email}.");
+}
+
 }
