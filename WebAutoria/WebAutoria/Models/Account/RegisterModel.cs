@@ -86,6 +86,9 @@ namespace WebAutoria.Models.Account
         /// </summary>
         public string? ProfilePhotoPath { get; set; }
 
+        [StringLength(50)]
+        public string Role { get; set; } = "User";
+
         // Валідація дати народження
         public static ValidationResult? ValidateBirthDate(DateTime? birthDate, ValidationContext context)
         {

@@ -12,8 +12,8 @@ using WebAutoria.Data;
 namespace WebAutoria.Migrations
 {
     [DbContext(typeof(AppDbAutoriaContext))]
-    [Migration("20250818142253_ChangeUserIdTypeToLong")]
-    partial class ChangeUserIdTypeToLong
+    [Migration("20250827164039_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
