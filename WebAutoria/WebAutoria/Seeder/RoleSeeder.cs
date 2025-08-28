@@ -12,6 +12,7 @@ namespace WebAutoria.Seeder
         {
             using var scope = app.ApplicationServices.CreateScope();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<RoleEntity>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<UserEntity>>();
 
             string[] roles = { "User", "Admin" };
 
@@ -20,6 +21,28 @@ namespace WebAutoria.Seeder
                 if (!await roleManager.RoleExistsAsync(role))
                 {
                     await roleManager.CreateAsync(new RoleEntity(role));
+                }
+            }
+
+            // Створення адміна за замовчуванням
+            var adminEmail = "admin@example.com";
+            var adminPassword = "AdminPassword123!";
+            var adminUser = await userManager.FindByEmailAsync(adminEmail);
+            if (adminUser == null)
+            {
+                adminUser = new UserEntity
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    FirstName = "Admin",
+                    LastName = "Default",
+                    RegistrationDate = DateTime.UtcNow,
+                    IsConfirmed = true
+                };
+                var result = await userManager.CreateAsync(adminUser, adminPassword);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Admin");
                 }
             }
         }

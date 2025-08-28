@@ -179,7 +179,7 @@ public class AccountController(
         var result = await userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
-            await userManager.AddToRoleAsync(user, "User");
+        await userManager.AddToRoleAsync(user, "User");
 
         // Якщо є завантажене фото
         if (model.ImageFile is not null && model.ImageFile.Length > 0)
@@ -258,21 +258,107 @@ public class AccountController(
     }
 
     [Authorize(Roles = "Admin")]
-[HttpPost("assign-role")]
-public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
-{
-    var user = await userManager.FindByEmailAsync(model.Email);
-    if (user == null)
-        return NotFound($"User with email {model.Email} not found.");
-
-    if (!await signInManager.UserManager.IsInRoleAsync(user, model.Role))
+    [HttpPost("assign-role")]
+    public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
     {
-        var result = await userManager.AddToRoleAsync(user, model.Role);
-        if (!result.Succeeded)
-            return BadRequest(result.Errors);
+        var user = await userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+            return NotFound($"User with email {model.Email} not found.");
+
+        if (!await signInManager.UserManager.IsInRoleAsync(user, model.Role))
+        {
+            var result = await userManager.AddToRoleAsync(user, model.Role);
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+        }
+
+        return Ok($"Role '{model.Role}' assigned to user {model.Email}.");
     }
 
-    return Ok($"Role '{model.Role}' assigned to user {model.Email}.");
-}
+    [HttpPost("create-user")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateUser([FromBody] RegisterModel model)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
+        var user = new UserEntity
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            FirstName = model.FirstName,
+            LastName = model.LastName,
+            Region = model.Region,
+            CityOrVillage = model.CityOrVillage,
+            PhoneNumber = model.PhoneNumber,
+            RegistrationDate = DateTime.UtcNow,
+            IsConfirmed = true
+        };
+
+        var result = await userManager.CreateAsync(user, model.Password);
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        // Присвоюємо роль (перевіряємо, чи це валідна роль: "User" або "Admin")
+        var validRoles = new[] { "User", "Admin" };
+        if (!validRoles.Contains(model.Role))
+            return BadRequest("Invalid role. Allowed: User or Admin.");
+
+        await userManager.AddToRoleAsync(user, model.Role);
+
+        return Ok(new { user.Id, user.Email, Message = "User created successfully." });
+    }
+
+    [HttpPut("update-user/{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUser(long id, [FromBody] UpdateUserModel model)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user == null)
+            return NotFound($"User with ID {id} not found.");
+
+        user.FirstName = model.FirstName ?? user.FirstName;
+        user.LastName = model.LastName ?? user.LastName;
+        user.Email = model.Email ?? user.Email;
+        user.Region = model.Region ?? user.Region;
+        user.CityOrVillage = model.CityOrVillage ?? user.CityOrVillage;
+        user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+        user.IsConfirmed = model.IsConfirmed ?? user.IsConfirmed;
+
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        // Зміна ролі, якщо вказано
+        if (!string.IsNullOrEmpty(model.Role))
+        {
+            var validRoles = new[] { "User", "Admin" };
+            if (!validRoles.Contains(model.Role))
+                return BadRequest("Invalid role. Allowed: User or Admin.");
+
+            var currentRoles = await userManager.GetRolesAsync(user);
+            foreach (var role in currentRoles)
+            {
+                await userManager.RemoveFromRoleAsync(user, role);
+            }
+            await userManager.AddToRoleAsync(user, model.Role);
+        }
+
+        return Ok(new { user.Id, user.Email, Message = "User updated successfully." });
+    }
+
+    [HttpDelete("delete-user/{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteUser(long id)
+    {
+        var user = await userManager.FindByIdAsync(id.ToString());
+        if (user == null)
+            return NotFound($"User with ID {id} not found.");
+
+        var result = await userManager.DeleteAsync(user);
+        if (!result.Succeeded)
+            return BadRequest(result.Errors);
+
+        return Ok(new { Message = "User deleted successfully." });
+    }
 }
