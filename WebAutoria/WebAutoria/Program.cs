@@ -272,9 +272,13 @@ using WebAutoria.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------------ DbContext ------------------
-builder.Services.AddDbContext<AppDbAutoriaContext>(options =>
+
+// Add services to the container. 
+//fix
+
+builder.Services.AddDbContext<AppDbAutoriaContext>(opt =>
 {
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    opt.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 // ------------------ Identity -------------------
