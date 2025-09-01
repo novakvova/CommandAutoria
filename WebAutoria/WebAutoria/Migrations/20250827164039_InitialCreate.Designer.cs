@@ -12,8 +12,8 @@ using WebAutoria.Data;
 namespace WebAutoria.Migrations
 {
     [DbContext(typeof(AppDbAutoriaContext))]
-    [Migration("20250820122554_initial_create")]
-    partial class initial_create
+    [Migration("20250827164039_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
