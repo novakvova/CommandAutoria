@@ -21,6 +21,7 @@ const Profile: React.FC = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data);
+        console.log(response.data)
       } catch (err) {
         setError('Помилка завантаження профілю');
         logout();
@@ -49,8 +50,18 @@ const Profile: React.FC = () => {
         <p><strong>Місто/село:</strong> {user.cityOrVillage || 'Не вказано'}</p>
         <p><strong>Номер телефону:</strong> {user.phoneNumber || 'Не вказано'}</p>
         <p><strong>Дата реєстрації:</strong> {new Date(user.registrationDate).toLocaleDateString()}</p>
-        <p><strong>Фото профілю:</strong> {user.profilePhoto ? <img src={user.profilePhoto} alt="Profile" className="w-24 h-24 object-cover rounded-full mt-2" /> : 'Не завантажено'}</p>
-        <p><strong>Ролі:</strong> {user.roles.join(', ')}</p>
+        <p>
+          <strong>Фото профілю:</strong>{" "}
+          {user.profilePhoto ? (
+            <img
+              src={`http://localhost:5128${user.profilePhoto}`}
+              alt="Profile"
+              className="w-24 h-24 object-cover rounded-full mt-2"
+            />
+          ) : (
+            "Не завантажено"
+          )}
+        </p>        <p><strong>Ролі:</strong> {user.roles.join(', ')}</p>
         <button
           onClick={handleLogout}
           className="w-full bg-red-500 text-white p-2 rounded mt-4 hover:bg-red-600"
