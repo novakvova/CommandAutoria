@@ -263,11 +263,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 using System.Text;
 using WebAutoria.Data;
 using WebAutoria.Data.Entities.Identity;
 using WebAutoria.Seeder;
 using WebAutoria.Services;
+using WebAutoria.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -292,6 +294,7 @@ builder.Services
 
 // ------------------ Services -------------------
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -361,6 +364,27 @@ builder.Services
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
     })
+    //.AddGoogle("Google", options =>
+    //{
+    //    options.ClientId = builder.Configuration["Google:ClientId"]!;
+    //    options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+    //    options.CallbackPath = "/signin-google";
+
+    //    options.SignInScheme = IdentityConstants.ExternalScheme;
+    //    options.CorrelationCookie.SameSite = SameSiteMode.Lax;
+    //    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    //    options.Scope.Add("profile");
+    //    options.Scope.Add("email");
+    //    /////////////
+    //    options.Events = new OAuthEvents
+    //    {
+    //        OnRedirectToAuthorizationEndpoint = context =>
+    //        {
+    //            Console.WriteLine("[Google RedirectUri] " + context.RedirectUri);
+    //            context.Response.Redirect(context.RedirectUri);
+    //            return Task.CompletedTask;
+    //        }
+    //    };
     .AddGoogle("Google", options =>
     {
         options.ClientId = builder.Configuration["Google:ClientId"]!;
@@ -370,9 +394,16 @@ builder.Services
         options.SignInScheme = IdentityConstants.ExternalScheme;
         options.CorrelationCookie.SameSite = SameSiteMode.Lax;
         options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+        // 🔽 обов'язково: щоб отримати імʼя та фото
         options.Scope.Add("profile");
         options.Scope.Add("email");
-        /////////////
+
+        // 🔽 мапимо клейми з JSON, які приходять від Google
+        options.ClaimActions.MapJsonKey("picture", "picture");
+        options.ClaimActions.MapJsonKey(ClaimTypes.GivenName, "given_name");
+        options.ClaimActions.MapJsonKey(ClaimTypes.Surname, "family_name");
+
         options.Events = new OAuthEvents
         {
             OnRedirectToAuthorizationEndpoint = context =>
@@ -382,6 +413,7 @@ builder.Services
                 return Task.CompletedTask;
             }
         };
+
         /////////////
     });
 

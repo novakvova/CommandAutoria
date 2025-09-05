@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
+const BACKEND_URL = 'http://localhost:5128';
+const OAUTH_RETURN_URL = `${window.location.origin}/oauth-callback`;
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,12 +22,17 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5128/api/account/login', { email, password });
+      const response = await axios.post(`${BACKEND_URL}/api/account/login`, { email, password });
       setToken(response.data.token);
       navigate('/profile');
     } catch (err) {
       setError('Невірний email або пароль');
     }
+  };
+
+  const handleGoogleLogin = () => {
+    const url = `${BACKEND_URL}/api/account/external-login/google?returnUrl=${encodeURIComponent(OAUTH_RETURN_URL)}`;
+    window.location.href = url;
   };
 
   return (
@@ -60,6 +68,42 @@ const Login: React.FC = () => {
             Увійти
           </button>
         </form>
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => navigate('/forgot-password')}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Забули пароль?
+          </button>
+        </div>
+
+        {/* Розділювач */}
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="bg-white px-2 text-gray-500">або</span>
+            </div>
+          </div>
+
+          {/* Google кнопка */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            className="mt-4 w-full border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition rounded-md p-2 flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
+              <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 36 24 36c-6.6 0-12-5.4-12-12S17.4 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 12.1 3.5 2.5 13.1 2.5 25S12.1 46.5 24 46.5 45.5 36.9 45.5 25c0-1.5-.2-3-.6-4.5z"/>
+              <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 15.4 3.5 8.1 8.7 6.3 14.7z"/>
+              <path fill="#4CAF50" d="M24 46.5c5 0 9.6-1.9 13.1-5l-6.1-5c-1.9 1.3-4.3 2.1-7 2.1-5.2 0-9.7-3.6-11.3-8.5l-6.6 5C8.1 41.3 15.4 46.5 24 46.5z"/>
+              <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.3-3.5 5.9-6.4 7.5l6.1 5c3.6-3.3 5.9-8.2 5.9-14 0-1.5-.2-3-.6-4.5z"/>
+            </svg>
+            Увійти з Google
+          </button>
+        </div>
       </div>
     </div>
   );

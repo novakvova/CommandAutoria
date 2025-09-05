@@ -1,18 +1,24 @@
-﻿using Microsoft.AspNetCore;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Claims;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using System;
-using System.Data;
-using System.Net.Http;
-using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
 using WebAutoria.Data.Entities.Identity;
+using WebAutoria.Models;
 using WebAutoria.Models.Account;
 using WebAutoria.Services;
-using static System.Net.Mime.MediaTypeNames;
+using WebAutoria.Services.Interfaces;
+using IEmailSender = WebAutoria.Services.Interfaces.IEmailSender;
 
 namespace WebAutoria.Controllers;
 
@@ -23,10 +29,19 @@ public class AccountController(
     SignInManager<UserEntity> signInManager,
     TokenService tokenService,
     IWebHostEnvironment env,
-    IHttpClientFactory httpClientFactory) : ControllerBase
+    IHttpClientFactory httpClientFactory,
+    IEmailSender emailSender,
+    IConfiguration configuration
+) : ControllerBase
 {
+    private readonly UserManager<UserEntity> _userManager = userManager;
+    private readonly SignInManager<UserEntity> _signInManager = signInManager;
+    private readonly TokenService _tokenService = tokenService;
     private readonly IWebHostEnvironment _env = env;
     private readonly IHttpClientFactory _http = httpClientFactory;
+    private readonly IEmailSender _emailSender = emailSender;
+    private readonly IConfiguration _config = configuration;
+
     // ===================== Google OAuth flow =====================
     [HttpGet("external-login/google")]
     [AllowAnonymous]
@@ -51,14 +66,13 @@ public class AccountController(
         var lastName = principal.FindFirst(ClaimTypes.Surname)?.Value;
         var providerKey = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value; // Google sub
         var pictureUrl = principal.FindFirst("picture")?.Value
-            ?? principal.FindFirst("urn:google:picture")?.Value;
-
+                         ?? principal.FindFirst("urn:google:picture")?.Value;
 
         if (string.IsNullOrEmpty(email))
             return BadRequest("Email is required from Google.");
 
         // створюємо/знаходимо користувача
-        var user = await userManager.FindByEmailAsync(email);
+        var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
             user = new UserEntity
@@ -71,50 +85,54 @@ public class AccountController(
                 RegistrationDate = DateTime.UtcNow,
                 IsConfirmed = true
             };
-            var result = await userManager.CreateAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            var createRes = await _userManager.CreateAsync(user);
+            if (!createRes.Succeeded)
+                return BadRequest(createRes.Errors);
         }
 
-
         // прив'язуємо Google-логін (AspNetUserLogins)
-        var logins = await userManager.GetLoginsAsync(user);
+        var logins = await _userManager.GetLoginsAsync(user);
         if (!logins.Any(l => l.LoginProvider == "Google") && !string.IsNullOrEmpty(providerKey))
         {
             var info = new UserLoginInfo("Google", providerKey, "Google");
-            var addLoginRes = await userManager.AddLoginAsync(user, info);
+            var addLoginRes = await _userManager.AddLoginAsync(user, info);
             if (!addLoginRes.Succeeded)
                 return BadRequest(addLoginRes.Errors);
         }
+
         // ---------- АВАТАР: скачуємо та кладемо у wwwroot/avatars ----------
         if (!string.IsNullOrWhiteSpace(pictureUrl))
         {
             var localPath = await DownloadAndSaveAvatarAsync(pictureUrl, user.Id);
             if (!string.IsNullOrEmpty(localPath))
             {
-                // збережемо локальний шлях як клейм "avatar"
-                var claims = await userManager.GetClaimsAsync(user);
+                // клейм "avatar"
+                var claims = await _userManager.GetClaimsAsync(user);
                 var old = claims.FirstOrDefault(c => c.Type == "avatar");
-                if (old != null) await userManager.RemoveClaimAsync(user, old);
-                await userManager.AddClaimAsync(user, new Claim("avatar", localPath));
+                if (old != null) await _userManager.RemoveClaimAsync(user, old);
+                await _userManager.AddClaimAsync(user, new Claim("avatar", localPath));
 
-                // (опційно) якщо у вашій UserEntity є властивість для фото – розкоментуйте:
-                // user.AvatarUrl = localPath;   // <- підставте вашу назву поля
-                // await userManager.UpdateAsync(user);
+                // поле користувача для фронта
+                user.ProfilePhoto = localPath;
+                await _userManager.UpdateAsync(user);
             }
         }
+
         // видаємо JWT
-        var roles = await userManager.GetRolesAsync(user);
-        var token = tokenService.GenerateToken(user, roles);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _tokenService.GenerateToken(user, roles);
+
         // варіант 1: редірект на фронт з токеном
         if (!string.IsNullOrWhiteSpace(returnUrl))
         {
             var url = QueryHelpers.AddQueryString(returnUrl, "token", token);
             return Redirect(url);
         }
+
         // варіант 2: просто JSON (зручно для Postman/мобільних)
         return Ok(new { token });
     }
+
     /// <summary>
     /// Скачати аватар за URL та зберегти в wwwroot/avatars/{userId}_{guid}.{ext}
     /// Повертає відносний шлях типу "/avatars/xxxxx.jpg" або null при збої.
@@ -136,7 +154,6 @@ public class AccountController(
                 _ => ".jpg" // дефолт
             };
 
-            // Папка wwwroot/avatars
             var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
             var dir = Path.Combine(webRoot, "avatars");
             Directory.CreateDirectory(dir);
@@ -147,7 +164,6 @@ public class AccountController(
             await using (var fs = System.IO.File.Create(absPath))
                 await resp.Content.CopyToAsync(fs);
 
-            // Відносний шлях, яким можна віддавати файл через StaticFiles
             return $"/avatars/{fileName}";
         }
         catch
@@ -156,6 +172,7 @@ public class AccountController(
         }
     }
 
+    // ===================== Email/Password реєстрація-логін =====================
     [HttpPost("register")]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Register([FromForm] RegisterModel model)
@@ -172,14 +189,15 @@ public class AccountController(
             Region = model.Region,
             CityOrVillage = model.CityOrVillage,
             PhoneNumber = model.PhoneNumber,
-            RegistrationDate = DateTime.UtcNow.AddHours(3), // Зберігаємо у UTC!
+            RegistrationDate = DateTime.UtcNow, // краще зберігати в UTC
             ProfilePhoto = model.ProfilePhotoPath
         };
 
-        var result = await userManager.CreateAsync(user, model.Password);
+        var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
-        await userManager.AddToRoleAsync(user, "User");
+
+        await _userManager.AddToRoleAsync(user, "User");
 
         // Якщо є завантажене фото
         if (model.ImageFile is not null && model.ImageFile.Length > 0)
@@ -193,11 +211,11 @@ public class AccountController(
             await model.ImageFile.CopyToAsync(fs);
 
             user.ProfilePhoto = $"/avatars/{fileName}";
-            await userManager.UpdateAsync(user);
+            await _userManager.UpdateAsync(user);
         }
 
-        var roles = await userManager.GetRolesAsync(user);
-        var token = tokenService.GenerateToken(user, roles);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _tokenService.GenerateToken(user, roles);
         return Ok(new { token });
     }
 
@@ -206,18 +224,19 @@ public class AccountController(
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
-        var user = await userManager.FindByEmailAsync(model.Email);
+        var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null) return Unauthorized();
 
-        var signIn = await signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
+        var signIn = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
         if (!signIn.Succeeded) return Unauthorized();
 
-        var roles = await userManager.GetRolesAsync(user);
-        var token = tokenService.GenerateToken(user, roles);
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _tokenService.GenerateToken(user, roles);
 
         return Ok(new { token });
     }
 
+    // ===================== Профіль =====================
     [Authorize]
     [HttpGet("me")]
     public async Task<IActionResult> Me()
@@ -225,10 +244,10 @@ public class AccountController(
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!long.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null) return NotFound();
 
-        var roles = await userManager.GetRolesAsync(user);
+        var roles = await _userManager.GetRolesAsync(user);
 
         return Ok(new
         {
@@ -245,6 +264,7 @@ public class AccountController(
         });
     }
 
+    // ===================== Адмін / сервісні =====================
     [Authorize]
     [HttpDelete("delete")]
     public async Task<IActionResult> DeleteSelf()
@@ -252,10 +272,10 @@ public class AccountController(
         var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!long.TryParse(userIdStr, out var userId)) return Unauthorized();
 
-        var user = await userManager.FindByIdAsync(userId.ToString());
+        var user = await _userManager.FindByIdAsync(userId.ToString());
         if (user == null) return NotFound("User not found.");
 
-        var result = await userManager.DeleteAsync(user);
+        var result = await _userManager.DeleteAsync(user);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
@@ -266,15 +286,15 @@ public class AccountController(
     [HttpPost("assign-role")]
     public async Task<IActionResult> AssignRole([FromBody] AssignRoleModel model)
     {
-        var user = await userManager.FindByEmailAsync(model.Email);
+        var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)
             return NotFound($"User with email {model.Email} not found.");
 
-        if (!await signInManager.UserManager.IsInRoleAsync(user, model.Role))
+        if (!await _signInManager.UserManager.IsInRoleAsync(user, model.Role))
         {
-            var result = await userManager.AddToRoleAsync(user, model.Role);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+            var res = await _userManager.AddToRoleAsync(user, model.Role);
+            if (!res.Succeeded)
+                return BadRequest(res.Errors);
         }
 
         return Ok($"Role '{model.Role}' assigned to user {model.Email}.");
@@ -300,16 +320,15 @@ public class AccountController(
             IsConfirmed = true
         };
 
-        var result = await userManager.CreateAsync(user, model.Password);
+        var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        // Присвоюємо роль (перевіряємо, чи це валідна роль: "User" або "Admin")
         var validRoles = new[] { "User", "Admin" };
         if (!validRoles.Contains(model.Role))
             return BadRequest("Invalid role. Allowed: User or Admin.");
 
-        await userManager.AddToRoleAsync(user, model.Role);
+        await _userManager.AddToRoleAsync(user, model.Role);
 
         return Ok(new { user.Id, user.Email, Message = "User created successfully." });
     }
@@ -318,7 +337,7 @@ public class AccountController(
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateUser(long id, [FromBody] UpdateUserModel model)
     {
-        var user = await userManager.FindByIdAsync(id.ToString());
+        var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)
             return NotFound($"User with ID {id} not found.");
 
@@ -330,23 +349,21 @@ public class AccountController(
         user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
         user.IsConfirmed = model.IsConfirmed ?? user.IsConfirmed;
 
-        var result = await userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-            return BadRequest(result.Errors);
+        var res = await _userManager.UpdateAsync(user);
+        if (!res.Succeeded)
+            return BadRequest(res.Errors);
 
-        // Зміна ролі, якщо вказано
         if (!string.IsNullOrEmpty(model.Role))
         {
             var validRoles = new[] { "User", "Admin" };
             if (!validRoles.Contains(model.Role))
                 return BadRequest("Invalid role. Allowed: User or Admin.");
 
-            var currentRoles = await userManager.GetRolesAsync(user);
+            var currentRoles = await _userManager.GetRolesAsync(user);
             foreach (var role in currentRoles)
-            {
-                await userManager.RemoveFromRoleAsync(user, role);
-            }
-            await userManager.AddToRoleAsync(user, model.Role);
+                await _userManager.RemoveFromRoleAsync(user, role);
+
+            await _userManager.AddToRoleAsync(user, model.Role);
         }
 
         return Ok(new { user.Id, user.Email, Message = "User updated successfully." });
@@ -356,14 +373,67 @@ public class AccountController(
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteUser(long id)
     {
-        var user = await userManager.FindByIdAsync(id.ToString());
+        var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)
             return NotFound($"User with ID {id} not found.");
 
-        var result = await userManager.DeleteAsync(user);
+        var res = await _userManager.DeleteAsync(user);
+        if (!res.Succeeded)
+            return BadRequest(res.Errors);
+
+        return Ok(new { Message = "User deleted successfully." });
+    }
+
+    // ===================== Відновлення паролю =====================
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null) return Ok(); // не розкриваємо, чи існує користувач
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // Кодуємо токен для URL (бо містить + / =)
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        // Посилання на фронт (SPA)
+        var frontendBase = _config["Frontend:BaseUrl"]?.TrimEnd('/') ?? $"{Request.Scheme}://{Request.Host}";
+        var callbackUrl = $"{frontendBase}/reset-password?token={encodedToken}&email={Uri.EscapeDataString(user.Email!)}";
+
+        await _emailSender.SendEmailAsync(
+            user.Email!,
+            "Відновлення паролю",
+            $"Для скидання паролю перейдіть за <a href='{callbackUrl}'>цим посиланням</a>."
+        );
+
+        return Ok(new { message = "Інструкція відправлена" });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+    {
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null) return BadRequest("Користувача не знайдено");
+
+        // Декодуємо, якщо прийшов Base64Url токен із фронта
+        string tokenToUse;
+        try
+        {
+            var tokenBytes = WebEncoders.Base64UrlDecode(model.Token);
+            tokenToUse = Encoding.UTF8.GetString(tokenBytes);
+        }
+        catch
+        {
+            // якщо фронт надсилає сирий токен без кодування — використаємо як є
+            tokenToUse = model.Token;
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, tokenToUse, model.Password);
         if (!result.Succeeded)
             return BadRequest(result.Errors);
 
-        return Ok(new { Message = "User deleted successfully." });
+        return Ok(new { message = "Пароль змінено" });
     }
 }
