@@ -324,17 +324,19 @@ builder.Services.AddSwaggerGen(o =>
 builder.Services.AddHttpClient();
 
 // ------------------ CORS (�������) ------------
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("Frontend", policy =>
-    {
-        policy
-            .WithOrigins("http://localhost:5173") // ����� �� ��� �����
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-});
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("Frontend", policy =>
+//     {
+//         policy
+//             .WithOrigins("http://localhost:5174") // ����� �� ��� �����
+//             .AllowAnyHeader()
+//             .AllowAnyMethod()
+//             .AllowCredentials();
+//     });
+// });
+
+builder.Services.AddCors();
 
 // -------- Authentication (JWT + Google) --------
 // �����: AddIdentity ��� ������ cookie-����� (� �.�. Identity.External).
@@ -401,7 +403,8 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseStaticFiles();
-app.UseCors("Frontend");
+// app.UseCors("Frontend");
+app.UseCors(x => x.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
 
 // ������� SameSite (����������� ��� ��������)
 app.UseCookiePolicy(new CookiePolicyOptions

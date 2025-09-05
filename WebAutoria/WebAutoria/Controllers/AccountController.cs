@@ -236,6 +236,11 @@ public class AccountController(
             user.Email,
             user.FirstName,
             user.LastName,
+            user.Region,
+            user.CityOrVillage,
+            user.PhoneNumber,
+            user.ProfilePhoto,
+            user.RegistrationDate,
             roles
         });
     }

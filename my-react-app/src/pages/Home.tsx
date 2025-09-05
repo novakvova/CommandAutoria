@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
   const { token, logout } = useAuth();
+
+  useEffect(() => {
+    if (token) {
+      navigate('/profile');
+    }
+  }, [token, navigate]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -34,7 +45,7 @@ const Home: React.FC = () => {
               Профіль
             </button>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
             >
               Вийти
