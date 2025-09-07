@@ -7,6 +7,9 @@ import Profile from '../pages/Profile';
 import OAuthCallback from '../pages/OAuthCallback';
 import ForgotPassword from '../pages/ForgotPassword';
 import ResetPassword from '../pages/ResetPassword';
+import Favorites from '../pages/Favorites';
+import Cars from '../pages/Cars';
+
 
 const AppRoutes: React.FC = () => {
   return (
@@ -18,7 +21,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/home" element={<Home />} />
       <Route path="/oauth-callback" element={<OAuthCallback />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/cars" element={<Cars />} />
+      <Route path="/favorites" element={<Favorites />} />
     </Routes>
   );
 };

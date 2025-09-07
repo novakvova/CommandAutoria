@@ -77,8 +77,15 @@ const Login: React.FC = () => {
             Забули пароль?
           </button>
         </div>
-
-        {/* Розділювач */}
+        <div className="mt-2 text-center">
+          <button
+            type="button"
+            onClick={() => navigate('/register')}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Ще не маєте акаунту? Зареєструйтеся
+          </button>
+        </div>
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -88,8 +95,6 @@ const Login: React.FC = () => {
               <span className="bg-white px-2 text-gray-500">або</span>
             </div>
           </div>
-
-          {/* Google кнопка */}
           <button
             type="button"
             onClick={handleGoogleLogin}

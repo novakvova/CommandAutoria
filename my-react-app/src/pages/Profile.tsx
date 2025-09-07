@@ -1,3 +1,4 @@
+// Updated Profile.tsx with added "Favorites" button
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -61,7 +62,20 @@ const Profile: React.FC = () => {
           ) : (
             "Не завантажено"
           )}
-        </p>        <p><strong>Ролі:</strong> {user.roles.join(', ')}</p>
+        </p>        
+        <p><strong>Ролі:</strong> {user.roles.join(', ')}</p>
+        <button
+          onClick={() => navigate('/cars')}
+          className="w-full bg-blue-500 text-white p-2 rounded mt-4 hover:bg-blue-600"
+        >
+          Автомобілі
+        </button>
+        <button
+          onClick={() => navigate('/favorites')}
+          className="w-full bg-purple-500 text-white p-2 rounded mt-4 hover:bg-purple-600"
+        >
+          Улюблені
+        </button>
         <button
           onClick={handleLogout}
           className="w-full bg-red-500 text-white p-2 rounded mt-4 hover:bg-red-600"
