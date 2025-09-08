@@ -1,8 +1,11 @@
-// New file: Favorites.tsx - Similar to Cars.tsx but for favorites, with remove button on each card
+// src/pages/Favorites.tsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import CarCard from "../components/CarCard";
+
+const API_BASE = "http://localhost:5128";
 
 const Favorites: React.FC = () => {
   const [favorites, setFavorites] = useState<any[]>([]);
@@ -11,19 +14,33 @@ const Favorites: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
 
+  // як у Cars.tsx: пріоритетне фото → перше в photos, далі fallback на photo
+  const getPrimaryPhotoUrl = (car: any): string | null => {
+    const fromArray =
+      Array.isArray(car.photos) && car.photos.length > 0
+        ? car.photos[0]?.url
+        : null;
+
+    if (fromArray && typeof fromArray === "string" && fromArray.length > 0) {
+      return fromArray;
+    }
+    return typeof car.photo === "string" ? car.photo : null;
+  };
+
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const response = await axios.get("http://localhost:5128/api/favorites", {
+        const response = await axios.get(`${API_BASE}/api/favorites`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setFavorites(response.data);
-      } catch (err) {
+        setFavorites(response.data || []);
+      } catch {
         setError("Не вдалося завантажити улюблені автомобілі");
       } finally {
         setLoading(false);
       }
     };
+
     if (token) {
       fetchFavorites();
     } else {
@@ -34,11 +51,11 @@ const Favorites: React.FC = () => {
 
   const handleRemoveFavorite = async (carId: number) => {
     try {
-      await axios.delete(`http://localhost:5128/api/favorites/${carId}`, {
+      await axios.delete(`${API_BASE}/api/favorites/${carId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setFavorites(favorites.filter((fav: any) => fav.id !== carId));
-    } catch (err) {
+      setFavorites((prev) => prev.filter((fav: any) => fav.id !== carId));
+    } catch {
       console.error("Помилка видалення з улюблених");
     }
   };
@@ -65,68 +82,23 @@ const Favorites: React.FC = () => {
       <main className="flex-grow p-4 sm:p-6 max-w-7xl mx-auto w-full">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {favorites.map((car: any) => (
-            <div
+            <CarCard
               key={car.id}
-              className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition"
-            >
-              {/* Фото */}
-              {typeof car.photo === "string" && car.photo ? (
-                <img
-                  src={car.photo.startsWith("http") ? car.photo : `http://localhost:5128${car.photo}`}
-                  alt={`${car.brand} ${car.model}`}
-                  className="w-full h-56 object-cover"
-                />
-              ) : (
-                <div className="w-full h-56 bg-gray-200 flex items-center justify-center">
-                  Фото немає
-                </div>
-              )}
-
-              {/* Інформація */}
-              <div className="p-4">
-                <h3 className="text-2xl font-bold text-green-600">
-                  {car.price} $
-                </h3>
-                <p className="text-gray-800 text-lg font-medium">
-                  {car.brand} {car.model}, {car.year}
-                </p>
-
-                <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mt-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">📍</span>
-                    {car.mileage ? `${car.mileage} км` : "—"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">⚙️</span>
-                    {car.transmission || "—"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🚗</span>
-                    {car.engineVolume ? `${car.engineVolume} л` : "—"}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">⛽</span>
-                    {car.engineType || "—"}
-                  </div>
-                </div>
-
-                <p className="text-gray-500 text-sm mt-2">Колір: {car.color || "—"}</p>
-
-                {car.description && (
-                  <p className="text-gray-700 text-sm mt-3 line-clamp-3">
-                    {car.description}
-                  </p>
-                )}
-
-                {/* Кнопка видалення з улюблених */}
+              car={car}
+              onClick={() => navigate(`/cars/${car.id}`)}
+              actionRight={
                 <button
-                  onClick={() => handleRemoveFavorite(car.id)}
-                  className="mt-4 w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation(); // щоб клік по кнопці не відкрив деталі
+                    handleRemoveFavorite(car.id);
+                  }}
+                  className="text-sm px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                  title="Видалити з улюблених"
                 >
-                  Видалити з улюблених
+                  Видалити
                 </button>
-              </div>
-            </div>
+              }
+            />
           ))}
         </div>
       </main>

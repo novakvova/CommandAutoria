@@ -1,4 +1,4 @@
-// Updated FavoritesController.cs with endpoints for favorites
+﻿// Updated FavoritesController.cs with endpoints for favorites
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,14 +24,16 @@ public class FavoritesController : ControllerBase
         var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
         if (userId == 0) return Unauthorized();
 
-        var favorites = await _context.Favorites
-            .Where(f => f.UserId == userId)
-            .Include(f => f.Car)
-            .Select(f => f.Car)
+        var cars = await _context.Cars
+            .AsNoTracking()
+            .Include(c => c.Photos)                     // ⬅️ фото підтягуються
+            .Where(c => _context.Favorites
+                .Any(f => f.UserId == userId && f.CarId == c.Id))
             .ToListAsync();
 
-        return Ok(favorites);
+        return Ok(cars);
     }
+
 
     // POST: api/favorites/{carId} - Add car to favorites
     [HttpPost("{carId:int}")]
