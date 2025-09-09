@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebAutoria.Data;
@@ -11,9 +12,11 @@ using WebAutoria.Data;
 namespace WebAutoria.Migrations
 {
     [DbContext(typeof(AppDbAutoriaContext))]
-    partial class AppDbAutoriaContextModelSnapshot : ModelSnapshot
+    [Migration("20250908061628_AddCarPhotos")]
+    partial class AddCarPhotos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

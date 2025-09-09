@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,7 +6,6 @@ const BACKEND_URL = 'http://localhost:5128';
 const OAUTH_RETURN_URL = `${window.location.origin}/oauth-callback`;
 
 function handleGoogleSignIn() {
-  // Робимо редірект на бек: він піде в Google і потім поверне нас на OAUTH_RETURN_URL з ?token=...
   const url = `${BACKEND_URL}/api/account/external-login/google?returnUrl=${encodeURIComponent(OAUTH_RETURN_URL)}`;
   window.location.href = url;
 }
@@ -179,6 +178,15 @@ const Register: React.FC = () => {
           >
             Зареєструватися
           </button>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Уже маєте акаунт? Увійти
+            </button>
+          </div>
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -188,13 +196,11 @@ const Register: React.FC = () => {
                 <span className="bg-white px-2 text-gray-500">або</span>
               </div>
             </div>
-
             <button
               type="button"
               onClick={handleGoogleSignIn}
               className="mt-4 w-full border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition rounded-md p-2 flex items-center justify-center gap-2"
             >
-              {/* Простий SVG-логотип Google, щоб не тягнути бібліотеки */}
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
                 <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 36 24 36c-6.6 0-12-5.4-12-12S17.4 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 12.1 3.5 2.5 13.1 2.5 25S12.1 46.5 24 46.5 45.5 36.9 45.5 25c0-1.5-.2-3-.6-4.5z"/>
                 <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 15.4 3.5 8.1 8.7 6.3 14.7z"/>
@@ -204,9 +210,7 @@ const Register: React.FC = () => {
               Увійти з Google
             </button>
           </div>
-
         </form>
-        
       </div>
     </div>
   );

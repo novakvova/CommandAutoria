@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
 using WebAutoria.Data.Entities.Identity;
 using WebAutoria.Data;
 
@@ -26,6 +27,7 @@ namespace WebAutoria.Controllers
         {
             var items = await _db.Cars
                 .AsNoTracking()
+                .Include(x => x.Photos)
                 .ToListAsync(ct);
 
             return Ok(items);
@@ -39,6 +41,7 @@ namespace WebAutoria.Controllers
         {
             var item = await _db.Cars
                 .AsNoTracking()
+                .Include(x => x.Photos)
                 .FirstOrDefaultAsync(x => x.Id == id, ct);
 
             if (item == null)
@@ -56,13 +59,22 @@ namespace WebAutoria.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            // Id має бути 0 для створення (EF згенерує значення)
             model.Id = 0;
+
+            // ✅ ОЧИСТКА ФОТО: беремо лише непорожні url
+            model.Photos = (model.Photos ?? new List<CarPhotoEntity>())
+                .Where(p => !string.IsNullOrWhiteSpace(p.Url))
+                .Select(p => new CarPhotoEntity { Url = p.Url.Trim() })
+                .ToList();
 
             await _db.Cars.AddAsync(model, ct);
             await _db.SaveChangesAsync(ct);
 
-            return CreatedAtAction(nameof(GetById), new { id = model.Id }, model);
+            var withPhotos = await _db.Cars
+                .Include(x => x.Photos)
+                .FirstAsync(x => x.Id == model.Id, ct);
+
+            return CreatedAtAction(nameof(GetById), new { id = model.Id }, withPhotos);
         }
 
         /// <summary>Оновити авто (повне оновлення)</summary>
@@ -78,18 +90,20 @@ namespace WebAutoria.Controllers
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
-            var entity = await _db.Cars.FirstOrDefaultAsync(x => x.Id == id, ct);
+            var entity = await _db.Cars
+                .Include(x => x.Photos)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
+
             if (entity == null)
                 return NotFound();
 
-            // Мапінг усіх полів CarEntity (без DTO — прямо)
+            // 🔧 оновлення скалярних полів (як було)
             entity.Brand = model.Brand;
             entity.Model = model.Model;
             entity.Year = model.Year;
             entity.Price = model.Price;
             entity.Condition = model.Condition;
             entity.Mileage = model.Mileage;
-            entity.Photo = model.Photo;
             entity.EngineVolume = model.EngineVolume;
             entity.EngineType = model.EngineType;
             entity.Color = model.Color;
@@ -100,6 +114,33 @@ namespace WebAutoria.Controllers
             entity.Description = model.Description;
             entity.Number = model.Number;
             entity.VIN = model.VIN;
+
+            // ✅ ОЧИСТКА ВХІДНИХ ФОТО (лише з url)
+            var incoming = (model.Photos ?? new List<CarPhotoEntity>())
+                .Where(p => !string.IsNullOrWhiteSpace(p.Url))
+                .Select(p => { p.Url = p.Url.Trim(); return p; })
+                .ToList();
+
+            // видалити ті, яких більше немає
+            var incomingIds = incoming.Where(p => p.Id != 0).Select(p => p.Id).ToHashSet();
+            var toRemove = entity.Photos.Where(p => !incomingIds.Contains(p.Id)).ToList();
+            if (toRemove.Count > 0)
+                _db.RemoveRange(toRemove);
+
+            // оновити існуючі / додати нові
+            foreach (var p in incoming)
+            {
+                if (p.Id == 0)
+                {
+                    entity.Photos.Add(new CarPhotoEntity { Url = p.Url, CarId = entity.Id });
+                }
+                else
+                {
+                    var existing = entity.Photos.FirstOrDefault(x => x.Id == p.Id);
+                    if (existing != null)
+                        existing.Url = p.Url;
+                }
+            }
 
             await _db.SaveChangesAsync(ct);
             return NoContent();

@@ -15,12 +15,15 @@ public class AppDbAutoriaContext : IdentityDbContext<UserEntity, RoleEntity, lon
     }
 
     public DbSet<CarEntity> Cars { get; set; }
+    public DbSet<CarPhotoEntity> CarPhotos { get; set; }   // ✅ нова таблиця для фото
     public DbSet<AdEntity> Ads { get; set; }
     public DbSet<FavoriteEntity> Favorites { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        // Налаштування зв’язків користувачів і ролей
         builder.Entity<UserRoleEntity>(ur =>
         {
             ur.HasOne(ur => ur.Role)
@@ -41,15 +44,25 @@ public class AppDbAutoriaContext : IdentityDbContext<UserEntity, RoleEntity, lon
                 .HasForeignKey(l => l.UserId)
                 .IsRequired();
         });
+
         builder.Entity<AdEntity>(e =>
         {
             e.HasKey(a => a.Id);
-            e.HasOne(a=> a.User)
+            e.HasOne(a => a.User)
                 .WithMany(u => u.Ads)
                 .HasForeignKey(a => a.UserId)
                 .HasPrincipalKey(u => u.Id)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // ✅ Конфігурація CarPhotoEntity
+        builder.Entity<CarPhotoEntity>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.HasOne(p => p.Car)
+                .WithMany(c => c.Photos)
+                .HasForeignKey(p => p.CarId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }
