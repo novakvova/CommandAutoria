@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
-using WebAutoria.Data.Entities.Identity;
 using WebAutoria.Data;
+using WebAutoria.Data.Entities.Identity;
+using WebAutoria.Models;
 
 namespace WebAutoria.Controllers
 {
@@ -14,10 +17,21 @@ namespace WebAutoria.Controllers
     public class CarsController : ControllerBase
     {
         private readonly AppDbAutoriaContext _db;
+        private readonly UserManager<UserEntity> _userManager;
 
-        public CarsController(AppDbAutoriaContext db)
+        public CarsController(AppDbAutoriaContext db, UserManager<UserEntity> userManager)
         {
             _db = db;
+            _userManager = userManager;
+        }
+
+        private bool IsAdmin() => User.IsInRole("Admin");
+
+        private async Task<long> CurrentUserIdAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            var idStr = await _userManager.GetUserIdAsync(user);
+            return long.TryParse(idStr, out var id) ? id : 0;
         }
 
         /// <summary>Список усіх авто</summary>
@@ -33,24 +47,51 @@ namespace WebAutoria.Controllers
             return Ok(items);
         }
 
-        /// <summary>Отримати авто за Id</summary>
+        /// <summary>Отримати авто за Id (з ownerId через Ads)</summary>
         [HttpGet("{id:int}")]
-        [ProducesResponseType(typeof(CarEntity), 200)]
-        [ProducesResponseType(404)]
-        public async Task<ActionResult<CarEntity>> GetById(int id, CancellationToken ct)
+        public async Task<ActionResult<CarDetailsDto>> GetById(int id, CancellationToken ct)
         {
-            var item = await _db.Cars
+            var car = await _db.Cars
                 .AsNoTracking()
-                .Include(x => x.Photos)
-                .FirstOrDefaultAsync(x => x.Id == id, ct);
+                .Include(c => c.Photos)
+                .FirstOrDefaultAsync(c => c.Id == id, ct);
 
-            if (item == null)
-                return NotFound();
+            if (car is null) return NotFound();
 
-            return Ok(item);
+            // Власник = userId з останнього Ad для цього CarId
+            var ownerId = await _db.Ads
+                .Where(a => a.CarId == id)
+                .OrderByDescending(a => a.Id)                 // надійніше за CreatedAt
+                .Select(a => (long?)a.UserId)
+                .FirstOrDefaultAsync(ct);
+
+            var dto = new CarDetailsDto(
+                car.Id,
+                car.Brand,
+                car.Model,
+                car.Year,
+                car.Price,
+                car.Condition,
+                car.Mileage,
+                car.EngineVolume,
+                car.EngineType,
+                car.Color,
+                car.FuelConsumptionCity,
+                car.FuelConsumptionHighway,
+                car.Transmission,
+                car.DriveType,
+                car.Description,
+                car.Number,
+                car.VIN,
+                car.Photos.Select(p => new CarPhotoDto(p.Id, p.Url)),
+                ownerId
+            );
+
+            return Ok(dto);
         }
 
-        /// <summary>Створити авто</summary>
+        /// <summary>Створити авто + автоматично створити Ad для поточного користувача</summary>
+        [Authorize]
         [HttpPost]
         [ProducesResponseType(typeof(CarEntity), 201)]
         [ProducesResponseType(400)]
@@ -61,14 +102,29 @@ namespace WebAutoria.Controllers
 
             model.Id = 0;
 
-            // ✅ ОЧИСТКА ФОТО: беремо лише непорожні url
+            // Лишаємо тільки валідні фото
             model.Photos = (model.Photos ?? new List<CarPhotoEntity>())
                 .Where(p => !string.IsNullOrWhiteSpace(p.Url))
                 .Select(p => new CarPhotoEntity { Url = p.Url.Trim() })
                 .ToList();
 
+            // Транзакція: спочатку авто, потім Ad
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
             await _db.Cars.AddAsync(model, ct);
+            await _db.SaveChangesAsync(ct); // отримуємо model.Id
+
+            var me = await CurrentUserIdAsync();
+            var ad = new AdEntity
+            {
+                CarId = model.Id,
+                UserId = me,
+                CreatedAt = System.DateTime.UtcNow // якщо у вашій моделі це поле є
+            };
+            await _db.Ads.AddAsync(ad, ct);
             await _db.SaveChangesAsync(ct);
+
+            await tx.CommitAsync(ct);
 
             var withPhotos = await _db.Cars
                 .Include(x => x.Photos)
@@ -77,16 +133,17 @@ namespace WebAutoria.Controllers
             return CreatedAtAction(nameof(GetById), new { id = model.Id }, withPhotos);
         }
 
-        /// <summary>Оновити авто (повне оновлення)</summary>
+        /// <summary>Оновити авто (доступ: власник Ad або адмін)</summary>
+        [Authorize]
         [HttpPut("{id:int}")]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> Update(int id, [FromBody] CarEntity model, CancellationToken ct)
         {
             if (id != model.Id)
                 return BadRequest("Id у шляху та в тілі запиту повинні збігатися.");
-
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
 
@@ -97,7 +154,21 @@ namespace WebAutoria.Controllers
             if (entity == null)
                 return NotFound();
 
-            // 🔧 оновлення скалярних полів (як було)
+            // Перевірка прав
+            if (!IsAdmin())
+            {
+                var ownerId = await _db.Ads
+                    .Where(a => a.CarId == id)
+                    .OrderByDescending(a => a.Id)
+                    .Select(a => (long?)a.UserId)
+                    .FirstOrDefaultAsync(ct);
+
+                var me = await CurrentUserIdAsync();
+                if (ownerId is null || ownerId.Value != me)
+                    return Forbid();
+            }
+
+            // Оновлення скалярів
             entity.Brand = model.Brand;
             entity.Model = model.Model;
             entity.Year = model.Year;
@@ -115,30 +186,25 @@ namespace WebAutoria.Controllers
             entity.Number = model.Number;
             entity.VIN = model.VIN;
 
-            // ✅ ОЧИСТКА ВХІДНИХ ФОТО (лише з url)
+            // Фото: синхронізація
             var incoming = (model.Photos ?? new List<CarPhotoEntity>())
                 .Where(p => !string.IsNullOrWhiteSpace(p.Url))
                 .Select(p => { p.Url = p.Url.Trim(); return p; })
                 .ToList();
 
-            // видалити ті, яких більше немає
             var incomingIds = incoming.Where(p => p.Id != 0).Select(p => p.Id).ToHashSet();
             var toRemove = entity.Photos.Where(p => !incomingIds.Contains(p.Id)).ToList();
             if (toRemove.Count > 0)
                 _db.RemoveRange(toRemove);
 
-            // оновити існуючі / додати нові
             foreach (var p in incoming)
             {
                 if (p.Id == 0)
-                {
                     entity.Photos.Add(new CarPhotoEntity { Url = p.Url, CarId = entity.Id });
-                }
                 else
                 {
                     var existing = entity.Photos.FirstOrDefault(x => x.Id == p.Id);
-                    if (existing != null)
-                        existing.Url = p.Url;
+                    if (existing != null) existing.Url = p.Url;
                 }
             }
 
@@ -146,19 +212,67 @@ namespace WebAutoria.Controllers
             return NoContent();
         }
 
-        /// <summary>Видалити авто</summary>
+        /// <summary>Видалити авто + усі Ads цього авто (доступ: власник Ad або адмін)</summary>
+        [Authorize]
         [HttpDelete("{id:int}")]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(403)]
         public async Task<IActionResult> Delete(int id, CancellationToken ct)
         {
             var entity = await _db.Cars.FirstOrDefaultAsync(x => x.Id == id, ct);
-            if (entity == null)
-                return NotFound();
+            if (entity == null) return NotFound();
 
+            // Перевірка прав
+            if (!IsAdmin())
+            {
+                var ownerId = await _db.Ads
+                    .Where(a => a.CarId == id)
+                    .OrderByDescending(a => a.Id)
+                    .Select(a => (long?)a.UserId)
+                    .FirstOrDefaultAsync(ct);
+
+                var me = await CurrentUserIdAsync();
+                if (ownerId is null || ownerId.Value != me)
+                    return Forbid();
+            }
+
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+            // Видаляємо всі Ads цього авто
+            var ads = await _db.Ads.Where(a => a.CarId == id).ToListAsync(ct);
+            if (ads.Count > 0) _db.Ads.RemoveRange(ads);
+
+            // Видаляємо авто
             _db.Cars.Remove(entity);
+
             await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+
             return NoContent();
+        }
+
+        // (опційно) Список "мої авто" — щоб фронт показував лише власника
+        [Authorize]
+        [HttpGet("mine")]
+        public async Task<ActionResult<IEnumerable<CarEntity>>> GetMine(CancellationToken ct)
+        {
+            var me = await CurrentUserIdAsync();
+
+            // авто, для яких є хоча б один Ad з моїм UserId
+            var myCarIds = await _db.Ads
+                .Where(a => a.UserId == me)
+                .Select(a => a.CarId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var items = await _db.Cars
+                .AsNoTracking()
+                .Include(c => c.Photos)
+                .Where(c => myCarIds.Contains(c.Id))
+                .ToListAsync(ct);
+
+            return Ok(items);
         }
     }
 }

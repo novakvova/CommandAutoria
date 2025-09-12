@@ -48,12 +48,19 @@ public class AppDbAutoriaContext : IdentityDbContext<UserEntity, RoleEntity, lon
         builder.Entity<AdEntity>(e =>
         {
             e.HasKey(a => a.Id);
+
             e.HasOne(a => a.User)
                 .WithMany(u => u.Ads)
                 .HasForeignKey(a => a.UserId)
                 .HasPrincipalKey(u => u.Id)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(a => a.Car)
+                .WithMany()                // або .WithMany(c => c.Ads) якщо додаси колекцію в CarEntity
+                .HasForeignKey(a => a.CarId)
+                .OnDelete(DeleteBehavior.Restrict); // щоб видалення авто не ламало історію оголошень (за бажанням)
         });
+
 
         // ✅ Конфігурація CarPhotoEntity
         builder.Entity<CarPhotoEntity>(e =>
