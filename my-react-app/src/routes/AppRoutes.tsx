@@ -18,7 +18,7 @@ import EditProfile from "../pages/EditProfile";
 const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/" element={<Cars />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/profile" element={<Profile />} />
