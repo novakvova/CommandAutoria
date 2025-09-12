@@ -436,4 +436,88 @@ public class AccountController(
 
         return Ok(new { message = "Пароль змінено" });
     }
+    [Authorize]
+    [HttpPut("update-self")]
+    public async Task<IActionResult> UpdateSelf([FromBody] UpdateUserModel model)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return NotFound();
+
+        user.FirstName = model.FirstName ?? user.FirstName;
+        user.LastName = model.LastName ?? user.LastName;
+        user.Region = model.Region ?? user.Region;
+        user.CityOrVillage = model.CityOrVillage ?? user.CityOrVillage;
+        user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+
+        var res = await _userManager.UpdateAsync(user);
+        if (!res.Succeeded)
+            return BadRequest(res.Errors);
+
+        return Ok(new { Message = "Profile updated successfully." });
+    }
+    [Authorize]
+    [HttpPost("update-photo")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UpdatePhoto([FromForm] UpdatePhotoForm form)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!long.TryParse(userIdStr, out var userId)) return Unauthorized();
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        if (user == null) return NotFound("User not found.");
+
+        var image = form.Image;
+        if (image == null || image.Length == 0)
+            return BadRequest("Файл зображення не надіслано.");
+
+        var allowed = new[] { "image/jpeg", "image/jpg", "image/png", "image/webp" };
+        var contentType = image.ContentType?.ToLowerInvariant();
+        if (string.IsNullOrEmpty(contentType) || !allowed.Contains(contentType))
+            return BadRequest("Підтримуються лише JPG/PNG/WEBP.");
+
+        const long maxBytes = 5 * 1024 * 1024;
+        if (image.Length > maxBytes)
+            return BadRequest("Занадто великий файл (макс. 5 МБ).");
+
+        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var dir = Path.Combine(webRoot, "avatars");
+        Directory.CreateDirectory(dir);
+
+        var ext = contentType switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => ".jpg"
+        };
+
+        var fileName = $"{user.Id}_{Guid.NewGuid():N}{ext}";
+        var absPath = Path.Combine(dir, fileName);
+
+        await using (var fs = System.IO.File.Create(absPath))
+            await image.CopyToAsync(fs);
+
+        // (опційно) видаляємо попереднє локальне фото
+        if (!string.IsNullOrWhiteSpace(user.ProfilePhoto) && user.ProfilePhoto.StartsWith("/avatars/"))
+        {
+            try
+            {
+                var oldAbs = Path.Combine(webRoot, user.ProfilePhoto.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(oldAbs)) System.IO.File.Delete(oldAbs);
+            }
+            catch { /* ігноруємо */ }
+        }
+
+        user.ProfilePhoto = $"/avatars/{fileName}";
+        var res = await _userManager.UpdateAsync(user);
+        if (!res.Succeeded) return BadRequest(res.Errors);
+
+        return Ok(new { profilePhoto = user.ProfilePhoto });
+    }
+
+
+
 }

@@ -1,37 +1,59 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+// src/pages/Login.tsx
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 
-const BACKEND_URL = 'http://localhost:5128';
+const BACKEND_URL = "http://localhost:5128";
 const OAUTH_RETURN_URL = `${window.location.origin}/oauth-callback`;
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { setToken, token } = useAuth();
+
+  // куди редіректити після логіну:
+  // 1) ?redirect=/cars/471
+  // 2) location.state.from (якщо прийшли з захищеної сторінки)
+  // 3) дефолт: /cars
+  const search = new URLSearchParams(location.search);
+  const redirectTarget =
+    search.get("redirect") ||
+    ((location.state as any)?.from as string | undefined) ||
+    "/cars";
 
   useEffect(() => {
     if (token) {
-      navigate('/profile');
+      navigate(redirectTarget, { replace: true });
     }
-  }, [token, navigate]);
+  }, [token, navigate, redirectTarget]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     try {
-      const response = await axios.post(`${BACKEND_URL}/api/account/login`, { email, password });
-      setToken(response.data.token);
-      navigate('/profile');
-    } catch (err) {
-      setError('Невірний email або пароль');
+      const res = await axios.post(`${BACKEND_URL}/api/account/login`, {
+        email,
+        password,
+      });
+      setToken(res.data.token);
+      navigate(redirectTarget, { replace: true });
+    } catch {
+      setError("Невірний email або пароль");
     }
   };
 
   const handleGoogleLogin = () => {
-    const url = `${BACKEND_URL}/api/account/external-login/google?returnUrl=${encodeURIComponent(OAUTH_RETURN_URL)}`;
+    // прокидаємо бажаний redirect аж до oauth-callback
+    const returnUrl = `${OAUTH_RETURN_URL}?redirect=${encodeURIComponent(
+      redirectTarget
+    )}`;
+    const url = `${BACKEND_URL}/api/account/external-login/google?returnUrl=${encodeURIComponent(
+      returnUrl
+    )}`;
     window.location.href = url;
   };
 
@@ -40,6 +62,7 @@ const Login: React.FC = () => {
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
         <h2 className="text-xl font-bold mb-4 text-center">Логін</h2>
         {error && <p className="text-red-500 mb-4">{error}</p>}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block mb-1">Email</label>
@@ -51,6 +74,7 @@ const Login: React.FC = () => {
               required
             />
           </div>
+
           <div className="mb-4">
             <label className="block mb-1">Пароль</label>
             <input
@@ -61,6 +85,7 @@ const Login: React.FC = () => {
               required
             />
           </div>
+
           <button
             type="submit"
             className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
@@ -68,24 +93,27 @@ const Login: React.FC = () => {
             Увійти
           </button>
         </form>
+
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => navigate('/forgot-password')}
+            onClick={() => navigate("/forgot-password")}
             className="text-sm text-blue-600 hover:underline"
           >
             Забули пароль?
           </button>
         </div>
+
         <div className="mt-2 text-center">
           <button
             type="button"
-            onClick={() => navigate('/register')}
+            onClick={() => navigate("/register", { state: { from: redirectTarget } })}
             className="text-sm text-blue-600 hover:underline"
           >
             Ще не маєте акаунту? Зареєструйтеся
           </button>
         </div>
+
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -95,11 +123,13 @@ const Login: React.FC = () => {
               <span className="bg-white px-2 text-gray-500">або</span>
             </div>
           </div>
+
           <button
             type="button"
             onClick={handleGoogleLogin}
             className="mt-4 w-full border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition rounded-md p-2 flex items-center justify-center gap-2"
           >
+            {/* іконка */}
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
               <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.2 36 24 36c-6.6 0-12-5.4-12-12S17.4 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 12.1 3.5 2.5 13.1 2.5 25S12.1 46.5 24 46.5 45.5 36.9 45.5 25c0-1.5-.2-3-.6-4.5z"/>
               <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 5.5 29.6 3.5 24 3.5 15.4 3.5 8.1 8.7 6.3 14.7z"/>

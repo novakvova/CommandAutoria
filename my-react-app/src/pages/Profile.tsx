@@ -1,8 +1,8 @@
-// Updated Profile.tsx with added "Favorites" button
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { FaCog } from "react-icons/fa";
 
 const Profile: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -22,7 +22,7 @@ const Profile: React.FC = () => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(response.data);
-        console.log(response.data)
+        console.log(response.data);
       } catch (err) {
         setError('Помилка завантаження профілю');
         logout();
@@ -42,7 +42,17 @@ const Profile: React.FC = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h2 className="text-xl font-bold mb-4 text-center">Профіль</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold">Профіль</h2>
+          <button
+            onClick={() => navigate('/edit-profile')}
+            className="text-gray-600 hover:text-gray-900"
+            title="Редагувати профіль"
+          >
+            <FaCog size={20} />
+          </button>
+        </div>
+
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <p><strong>Email:</strong> {user.email}</p>
         <p><strong>Ім'я:</strong> {user.firstName}</p>
@@ -62,10 +72,11 @@ const Profile: React.FC = () => {
           ) : (
             "Не завантажено"
           )}
-        </p>        
+        </p>
         <p><strong>Ролі:</strong> {user.roles.join(', ')}</p>
+
         <button
-          onClick={() => navigate('/cars')}
+          onClick={() => navigate('/Cars')}
           className="w-full bg-blue-500 text-white p-2 rounded mt-4 hover:bg-blue-600"
         >
           Автомобілі
